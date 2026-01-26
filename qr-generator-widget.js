@@ -808,69 +808,74 @@
         function startPollingRedemption(codeId, codeValue) {
             if (!codeId && !codeValue) return;
             
-            // Verhindere mehrfaches Starten
-            if (isPolling) {
-                console.warn("Polling already active, stopping previous instance");
-                stopPollingRedemption();
-            }
-            
-            // Stoppe alle laufenden Polling-Instanzen
+            // Stoppe alle laufenden Polling-Instanzen ZUERST
             stopPollingRedemption();
             
-            // Setze Flag und Payload
-            isPolling = true;
-            statusPollPayload = { code_id: codeId, code: codeValue };
-            let pollCount = 0;
-            const MAX_POLLS = 30; // Maximal 30 Polls (ca. 2-3 Minuten)
-
-            const poll = async () => {
-                // Prüfe ob Polling noch aktiv ist
-                if (!isPolling || !statusPollPayload) {
+            // Warte kurz, um sicherzustellen, dass alle Timeouts gestoppt sind
+            setTimeout(() => {
+                // Prüfe nochmal, ob bereits Polling aktiv ist (könnte durch andere Instanz gestartet worden sein)
+                if (isPolling) {
+                    console.warn("[QR Polling] Polling already active, aborting");
                     return;
                 }
                 
-                pollCount++;
-                
-                // Stoppe nach maximaler Anzahl von Polls
-                if (pollCount > MAX_POLLS) {
-                    console.warn("Polling timeout - maximum attempts reached");
-                    stopPollingRedemption();
-                    return;
-                }
-                
-                try {
-                    const res = await fetch(STATUS_ENDPOINT, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(statusPollPayload)
-                    });
-                    if (!res.ok) throw new Error(`Status ${res.status}`);
-                    const data = await res.json();
+                // Setze Flag und Payload
+                isPolling = true;
+                statusPollPayload = { code_id: codeId, code: codeValue };
+                let pollCount = 0;
+                const MAX_POLLS = 30; // Maximal 30 Polls (ca. 2-3 Minuten)
 
-                    if (data?.redeemed) {
-                        if (Number.isFinite(data.loyalty_bonus_threshold)) loyaltyThreshold = data.loyalty_bonus_threshold;
-                        const bonusInfo = { triggered: Boolean(data.bonus_triggered) };
-                        showCustomerInfo(data.customer, data.points_after, data.code_id, bonusInfo, data.recent_visits || []);
-                        setStatus(bonusInfo.triggered ? T.bonusReached.replace('{threshold}', loyaltyThreshold) : T.pointsUpdated, true);
-                        stopCountdown();
+                const poll = async () => {
+                    // Prüfe ob Polling noch aktiv ist
+                    if (!isPolling || !statusPollPayload) {
+                        console.log("[QR Polling] Polling stopped, aborting");
+                        return;
+                    }
+                    
+                    pollCount++;
+                    console.log(`[QR Polling] Executing poll #${pollCount} at ${new Date().toLocaleTimeString()}`);
+                    
+                    // Stoppe nach maximaler Anzahl von Polls
+                    if (pollCount > MAX_POLLS) {
+                        console.warn("Polling timeout - maximum attempts reached");
                         stopPollingRedemption();
                         return;
                     }
-                } catch (err) {
-                    console.warn("Status polling failed:", err);
-                }
+                    
+                    try {
+                        const res = await fetch(STATUS_ENDPOINT, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(statusPollPayload)
+                        });
+                        if (!res.ok) throw new Error(`Status ${res.status}`);
+                        const data = await res.json();
+
+                        if (data?.redeemed) {
+                            if (Number.isFinite(data.loyalty_bonus_threshold)) loyaltyThreshold = data.loyalty_bonus_threshold;
+                            const bonusInfo = { triggered: Boolean(data.bonus_triggered) };
+                            showCustomerInfo(data.customer, data.points_after, data.code_id, bonusInfo, data.recent_visits || []);
+                            setStatus(bonusInfo.triggered ? T.bonusReached.replace('{threshold}', loyaltyThreshold) : T.pointsUpdated, true);
+                            stopCountdown();
+                            stopPollingRedemption();
+                            return;
+                        }
+                    } catch (err) {
+                        console.warn("Status polling failed:", err);
+                    }
+                    
+                    // Nur weiterpolling wenn noch aktiv
+                    if (isPolling && statusPollPayload) {
+                        // Einheitliches 8 Sekunden Intervall
+                        console.log(`[QR Polling] Scheduling next poll in 8 seconds (Poll #${pollCount + 1})`);
+                        statusPollTimeout = setTimeout(poll, 8000);
+                    }
+                };
                 
-                // Nur weiterpolling wenn noch aktiv
-                if (isPolling && statusPollPayload) {
-                    // Einheitliches 8 Sekunden Intervall
-                    console.log(`[QR Polling] Next poll in 8 seconds (Poll #${pollCount})`);
-                    statusPollTimeout = setTimeout(poll, 8000);
-                }
-            };
-            
-            // Erster Poll startet nach 8 Sekunden (während dieser Zeit wird der Code gescannt)
-            console.log('[QR Polling] Starting polling - first poll in 8 seconds (no polling during first 8 seconds)');
-            statusPollTimeout = setTimeout(poll, 8000);
+                // Erster Poll startet nach 8 Sekunden (während dieser Zeit wird der Code gescannt)
+                console.log('[QR Polling] Starting polling - first poll in 8 seconds (no polling during first 8 seconds)');
+                statusPollTimeout = setTimeout(poll, 8000);
+            }, 50); // Kurze Verzögerung um sicherzustellen, dass alte Timeouts gestoppt sind
         }
 
         function stopPollingRedemption() {
