@@ -803,7 +803,7 @@
             expiryTime = null;
         }
 
-        // Polling mit progressivem Intervall (schnell am Anfang, dann langsamer)
+        // Polling mit verzögertem Start (4s Pause, dann 8s Intervall)
         function startPollingRedemption(codeId, codeValue) {
             if (!codeId && !codeValue) return;
             stopPollingRedemption();
@@ -844,24 +844,14 @@
                     console.warn("Status polling failed:", err);
                 }
                 
-                // Progressives Intervall optimiert für beide Szenarien:
-                // - Bestehende Kunden (mit Consent): ~2 Sekunden → erster Poll nach 8s findet Validierung
-                // - Neue Kunden (ohne Consent): ~12 Sekunden → mehrere Polls decken das ab
-                // - Erste 4 Polls: 8 Sekunden (reduzierte Last, deckt beide Szenarien ab)
-                // - Nächste 10 Polls: 10 Sekunden (moderate Geschwindigkeit)
-                // - Danach: 12 Sekunden (weiter reduzierte Last)
-                let interval;
-                if (pollCount <= 4) {
-                    interval = 8000; // 8 Sekunden - deckt bestehende Kunden (2s Validierung wird nach 8s gefunden) und neue Kunden ab (12s = 2 Polls)
-                } else if (pollCount <= 14) {
-                    interval = 10000; // 10 Sekunden für moderate Geschwindigkeit
-                } else {
-                    interval = 12000; // 12 Sekunden für weiter reduzierte Last
-                }
-                
-                statusPollTimeout = setTimeout(poll, interval);
+                // Einheitliches 8 Sekunden Intervall nach der ersten 4 Sekunden Pause
+                // - Erste 4 Sekunden: Kein Polling (Code wird noch gescannt)
+                // - Danach: 8 Sekunden Intervall für alle weiteren Polls
+                statusPollTimeout = setTimeout(poll, 8000);
             };
-            poll();
+            
+            // Erster Poll startet nach 4 Sekunden (während dieser Zeit wird der Code gescannt)
+            statusPollTimeout = setTimeout(poll, 4000);
         }
 
         function stopPollingRedemption() {
