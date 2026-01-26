@@ -867,15 +867,20 @@
                 // Nur weiterpolling wenn noch aktiv
                 if (isPolling && statusPollPayload) {
                     // Einheitliches 8 Sekunden Intervall nach der ersten 4 Sekunden Pause
+                    console.log(`[QR Polling] Next poll in 8 seconds (Poll #${pollCount})`);
                     statusPollTimeout = setTimeout(poll, 8000);
                 }
             };
             
             // Erster Poll startet nach 4 Sekunden (während dieser Zeit wird der Code gescannt)
+            console.log('[QR Polling] Starting polling - first poll in 4 seconds');
             statusPollTimeout = setTimeout(poll, 4000);
         }
 
         function stopPollingRedemption() {
+            if (isPolling) {
+                console.log('[QR Polling] Stopping polling');
+            }
             isPolling = false;
             if (statusPollTimeout) {
                 clearTimeout(statusPollTimeout);
