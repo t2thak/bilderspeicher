@@ -803,14 +803,25 @@
             expiryTime = null;
         }
 
-        // Polling
+        // Polling mit progressivem Intervall (schnell am Anfang, dann langsamer)
         function startPollingRedemption(codeId, codeValue) {
             if (!codeId && !codeValue) return;
             stopPollingRedemption();
             statusPollPayload = { code_id: codeId, code: codeValue };
+            let pollCount = 0;
+            const MAX_POLLS = 30; // Maximal 30 Polls (ca. 2-3 Minuten)
 
             const poll = async () => {
                 if (!statusPollPayload) return;
+                pollCount++;
+                
+                // Stoppe nach maximaler Anzahl von Polls
+                if (pollCount > MAX_POLLS) {
+                    console.warn("Polling timeout - maximum attempts reached");
+                    stopPollingRedemption();
+                    return;
+                }
+                
                 try {
                     const res = await fetch(STATUS_ENDPOINT, {
                         method: "POST",
@@ -832,7 +843,23 @@
                 } catch (err) {
                     console.warn("Status polling failed:", err);
                 }
-                statusPollTimeout = setTimeout(poll, 4000);
+                
+                // Progressives Intervall optimiert für beide Szenarien:
+                // - Bestehende Kunden (mit Consent): ~2 Sekunden → erster Poll nach 4s findet Validierung
+                // - Neue Kunden (ohne Consent): ~12 Sekunden → mehrere Polls decken das ab
+                // - Erste 6 Polls: 4 Sekunden (Minimum 4s, deckt beide Szenarien ab)
+                // - Nächste 10 Polls: 6 Sekunden (moderate Geschwindigkeit)
+                // - Danach: 8 Sekunden (reduzierte Last)
+                let interval;
+                if (pollCount <= 6) {
+                    interval = 4000; // 4 Sekunden Minimum - deckt bestehende Kunden (2s Validierung wird nach 4s gefunden) und neue Kunden ab (12s = 3 Polls)
+                } else if (pollCount <= 16) {
+                    interval = 6000; // 6 Sekunden für moderate Geschwindigkeit
+                } else {
+                    interval = 8000; // 8 Sekunden für reduzierte Last
+                }
+                
+                statusPollTimeout = setTimeout(poll, interval);
             };
             poll();
         }
