@@ -617,6 +617,7 @@
         let expiryTime = null;
         let statusPollTimeout = null;
         let statusPollPayload = null;
+        let isPolling = false; // Flag um zu verhindern, dass mehrere Polling-Instanzen gleichzeitig laufen
         let lastCelebratedCodeId = null;
         let cleanupTimeout = null;
 
@@ -803,16 +804,35 @@
             expiryTime = null;
         }
 
+        let statusPollTimeout = null;
+        let statusPollPayload = null;
+        let isPolling = false; // Flag um zu verhindern, dass mehrere Polling-Instanzen gleichzeitig laufen
+
         // Polling mit verzögertem Start (4s Pause, dann 8s Intervall)
         function startPollingRedemption(codeId, codeValue) {
             if (!codeId && !codeValue) return;
+            
+            // Verhindere mehrfaches Starten
+            if (isPolling) {
+                console.warn("Polling already active, stopping previous instance");
+                stopPollingRedemption();
+            }
+            
+            // Stoppe alle laufenden Polling-Instanzen
             stopPollingRedemption();
+            
+            // Setze Flag und Payload
+            isPolling = true;
             statusPollPayload = { code_id: codeId, code: codeValue };
             let pollCount = 0;
             const MAX_POLLS = 30; // Maximal 30 Polls (ca. 2-3 Minuten)
 
             const poll = async () => {
-                if (!statusPollPayload) return;
+                // Prüfe ob Polling noch aktiv ist
+                if (!isPolling || !statusPollPayload) {
+                    return;
+                }
+                
                 pollCount++;
                 
                 // Stoppe nach maximaler Anzahl von Polls
@@ -844,10 +864,11 @@
                     console.warn("Status polling failed:", err);
                 }
                 
-                // Einheitliches 8 Sekunden Intervall nach der ersten 4 Sekunden Pause
-                // - Erste 4 Sekunden: Kein Polling (Code wird noch gescannt)
-                // - Danach: 8 Sekunden Intervall für alle weiteren Polls
-                statusPollTimeout = setTimeout(poll, 8000);
+                // Nur weiterpolling wenn noch aktiv
+                if (isPolling && statusPollPayload) {
+                    // Einheitliches 8 Sekunden Intervall nach der ersten 4 Sekunden Pause
+                    statusPollTimeout = setTimeout(poll, 8000);
+                }
             };
             
             // Erster Poll startet nach 4 Sekunden (während dieser Zeit wird der Code gescannt)
@@ -855,7 +876,11 @@
         }
 
         function stopPollingRedemption() {
-            if (statusPollTimeout) clearTimeout(statusPollTimeout);
+            isPolling = false;
+            if (statusPollTimeout) {
+                clearTimeout(statusPollTimeout);
+                statusPollTimeout = null;
+            }
             statusPollPayload = null;
         }
 
