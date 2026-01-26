@@ -804,10 +804,6 @@
             expiryTime = null;
         }
 
-        let statusPollTimeout = null;
-        let statusPollPayload = null;
-        let isPolling = false; // Flag um zu verhindern, dass mehrere Polling-Instanzen gleichzeitig laufen
-
         // Polling mit verzögertem Start (8s Pause, dann 8s Intervall)
         function startPollingRedemption(codeId, codeValue) {
             if (!codeId && !codeValue) return;
