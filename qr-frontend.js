@@ -9,7 +9,7 @@
 (function() {
   'use strict';
 
-  var webhook = '', branch = '', base = 'https://n8nv2.flowrk.io/webhook/', language = 'vi';
+  var webhook = '', branch = '', base = 'https://n8nv2.flowrk.io/webhook/', language = 'de';
   var scriptEl = document.currentScript || (function() {
     var s = document.getElementsByTagName('script');
     for (var i = s.length - 1; i >= 0; i--) {
@@ -24,7 +24,7 @@
     if (p.get('branch_id')) branch = (p.get('branch_id') || '').trim();
     if (p.get('base')) base = decodeURIComponent((p.get('base') || '').trim()) || base;
     if (p.get('webhook_base')) base = decodeURIComponent((p.get('webhook_base') || '').trim()) || base;
-    if (p.get('language')) language = (p.get('language') || 'vi').trim().toLowerCase();
+    if (p.get('language')) language = (p.get('language') || 'de').trim().toLowerCase();
   } catch (e) {}
   if (scriptEl) {
     var g = function(n) { var v = scriptEl.getAttribute('data-' + n); return (v && v.trim()) ? v.trim() : ''; };
@@ -37,7 +37,7 @@
   if (cfg.webhook) webhook = (cfg.webhook || '').trim();
   if (cfg.branch_id || cfg.branch) branch = (cfg.branch_id || cfg.branch || '').trim();
   if (cfg.webhook_base || cfg.base) base = (cfg.webhook_base || cfg.base || base).replace(/\/?$/, '') + '/';
-  if (cfg.language) language = (cfg.language || 'vi').toString().trim().toLowerCase();
+  if (cfg.language) language = (cfg.language || 'de').toString().trim().toLowerCase();
 
   base = (base || 'https://n8nv2.flowrk.io/webhook/').replace(/\/?$/, '') + '/';
   var CONTAINER_ID = (cfg.container_id || 'qr-generator-container');
@@ -47,7 +47,7 @@
     en: { title: 'Generate code', desc: 'Create validation code for staff, get WhatsApp deep link and display QR code.', staff: 'Staff', staffPlaceholder: 'Name', validMinutes: 'Valid for (minutes)', maxUses: 'Max uses', points: 'Points', note: 'Note', notePlaceholder: 'color/service', advancedOptions: 'Advanced options', generate: 'Generate', reset: 'Reset', loading: 'Loading…', qrPlaceholder: 'QR code will appear here', qrHint: 'This QR code contains a WhatsApp deep link. Customer scans and sends the code.', customerInfo: 'Customer info', bonusReached: 'Customer reached {n} points! 🎉', name: 'Name', phone: 'Phone', currentPoints: 'Current points', visits: 'Visits', lastVisit: 'Last visit', recentVisits: 'Last 5 visits', noData: 'No data', customerInfoHint: 'Info will appear when customer confirms the code.', optOutInfo: 'Customers can leave the program by typing: <code>/stop</code> in WhatsApp chat.', branchNotFound: 'Branch not found', loadError: 'Load error', today: 'Today', daysAgo: '{n} days ago', sessionExpired: 'Session expired', pointsAwarded: 'Points awarded: {n}', waitingConfirm: 'Waiting for confirmation…', complete: 'Complete', pointsUpdated: 'Customer points updated', generating: 'Generating…', createFailed: 'Failed to generate', serverError: 'Server {n}', guest: 'Customer', maskHidden: 'hidden' },
     vi: { title: 'Tạo mã xác thực', desc: 'Tạo mã xác thực cho nhân viên, lấy liên kết sâu WhatsApp và hiển thị mã QR để khách quét.', staff: 'Nhân viên', staffPlaceholder: 'Tên', validMinutes: 'Thời gian hiệu lực (phút)', maxUses: 'Số lần dùng tối đa', points: 'Điểm', note: 'Ghi chú', notePlaceholder: 'mầu/dịch vụ', advancedOptions: 'Tùy chọn nâng cao', generate: 'Tạo', reset: 'Đặt lại', loading: 'Đang tải…', qrPlaceholder: 'Mã QR sẽ hiển thị ở đây', qrHint: 'Mã QR này chứa liên kết sâu WhatsApp. Khách có thể quét và gửi mã.', customerInfo: 'Thông tin khách', bonusReached: 'Khách đã đạt {n} điểm! 🎉', name: 'Tên', phone: 'SĐT', currentPoints: 'Điểm hiện có', visits: 'Lượt ghé', lastVisit: 'Lần cuối', recentVisits: '5 lần gần nhất', noData: 'Không có dữ liệu', customerInfoHint: 'Thông tin sẽ xuất hiện khi khách xác nhận mã.', optOutInfo: 'Nếu khách hàng muốn rời khỏi chương trình, chỉ cần nhập: <code>/stop</code> trong cuộc trò chuyện WhatsApp.', branchNotFound: 'Không tìm thấy chi nhánh', loadError: 'Lỗi tải', today: 'Hôm nay', daysAgo: '{n} ngày trước', sessionExpired: 'Phiên đã hết hạn', pointsAwarded: 'Điểm được cấp: {n}', waitingConfirm: 'Đang chờ khách xác nhận điểm...', complete: 'Hoàn tất', pointsUpdated: 'Điểm khách đã được cập nhật', generating: 'Đang tạo…', createFailed: 'Tạo mã không thành công', serverError: 'Máy chủ {n}', guest: 'Khách', maskHidden: 'ẩn' }
   };
-  var T = TRANSLATIONS[language] || TRANSLATIONS.vi;
+  var T = TRANSLATIONS[language] || TRANSLATIONS.de;
 
   function init() {
     var container = document.getElementById(CONTAINER_ID);
@@ -78,23 +78,23 @@
         var lang = parseLangFromSrc(src) || (s.getAttribute('data-language') || '').trim().toLowerCase();
         if (lang) { language = lang; break; }
       }
-      if (language === 'vi') {
+      if (language === 'de') {
         try {
           var pageParams = new URLSearchParams(window.location.search);
           var pageLang = (pageParams.get('language') || pageParams.get('lang') || '').trim().toLowerCase();
           if (pageLang) language = pageLang;
         } catch (e) {}
       }
-      if (language === 'vi' && window.QR_FRONTEND_LANGUAGE) {
+      if (language === 'de' && window.QR_FRONTEND_LANGUAGE) {
         var gl = String(window.QR_FRONTEND_LANGUAGE).trim().toLowerCase();
         if (gl) language = gl;
       }
     }
-    T = TRANSLATIONS[language] || TRANSLATIONS.vi;
+    T = TRANSLATIONS[language] || TRANSLATIONS.de;
 
     if (!webhook || !branch) {
       var msg = { de: 'App bitte über Softr öffnen oder Parameter setzen. URL: ?webhook=justai&branch=DEINE-BRANCH-ID oder data-webhook / data-branch am Script-Tag.', en: 'Open app via Softr or set parameters. URL: ?webhook=justai&branch=YOUR-BRANCH-ID or data-webhook / data-branch on script tag.', vi: 'Mở app qua Softr hoặc đặt tham số. URL: ?webhook=justai&branch=BRANCH-ID hoặc data-webhook / data-branch trên thẻ script.' };
-      var t = msg[language] || msg.vi;
+      var t = msg[language] || msg.de;
       container.innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif;max-width:400px;margin:0 auto;"><p style="font-size:18px;margin:0 0 12px;">' + t + '</p></div>';
       return;
     }
