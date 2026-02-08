@@ -1,14 +1,11 @@
 /**
  * QR-App Embed – eine .js auf GitHub, in Softr nur Webhook + Branch setzen.
  *
- * SOFTR – Variante 1 (Konfig oben):
+ * SOFTR (jsDelivr – funktioniert auch ohne GitHub Pages):
  *   <script>window.QR_EMBED = { webhook: "justai", branch: "DEINE-BRANCH-ID" };</script>
- *   <script src="https://t2thak.github.io/bilderspeicher/embed.js"></script>
+ *   <script src="https://cdn.jsdelivr.net/gh/t2thak/bilderspeicher@main/embed.js"></script>
  *
- * SOFTR – Variante 2 (alles in einer Zeile):
- *   <script src="https://t2thak.github.io/bilderspeicher/embed.js" data-webhook="justai" data-branch="DEINE-BRANCH-ID"></script>
- *
- * Optionale Felder: appUrl (App-URL), base (n8n Webhook-Basis)
+ * Optionale Felder: appUrl (z.B. GitHub Pages der App), base (n8n Webhook-Basis)
  */
 (function() {
   var webhook, branch, appUrl, base;
@@ -32,7 +29,7 @@
     branch = cfg.branch || getAttr("branch", "");
     appUrl = cfg.appUrl || getAttr("src", "");
     base = cfg.base || getAttr("base", "https://n8nv2.flowrk.io/webhook/");
-    if (!appUrl && me.src) {
+    if (!appUrl && me.src && me.src.indexOf("github.io") !== -1) {
       try {
         appUrl = new URL(me.src).origin + new URL(me.src).pathname.replace(/embed\.js.*$/, "");
       } catch (e) {}
@@ -40,14 +37,17 @@
   } else {
     webhook = cfg.webhook || "justai";
     branch = cfg.branch || "";
-    appUrl = cfg.appUrl || "https://t2thak.github.io/bilderspeicher/";
+    appUrl = cfg.appUrl || "";
     base = cfg.base || "https://n8nv2.flowrk.io/webhook/";
   }
 
   appUrl = (appUrl || "https://t2thak.github.io/bilderspeicher/").replace(/\/?$/, "/");
 
   if (!branch) {
-    document.write('<p style="padding:20px;color:#999;">Webhook/Branch fehlt. In Softr setzen: window.QR_EMBED = { webhook: "justai", branch: "DEINE-BRANCH-ID" }; oder data-webhook / data-branch am Script-Tag.</p>');
+    var msg = document.createElement("p");
+    msg.style.cssText = "padding:20px;color:#c00;font-family:sans-serif;";
+    msg.textContent = "QR_EMBED: branch fehlt. Setze window.QR_EMBED = { webhook: 'justai', branch: 'DEINE-BRANCH-ID' };";
+    document.body.appendChild(msg);
     return;
   }
 
@@ -56,9 +56,25 @@
     "&branch=" + encodeURIComponent(branch) +
     "&base=" + encodeURIComponent(base);
 
+  var wrapper = document.createElement("div");
+  wrapper.id = "qr-embed-wrapper";
+  wrapper.style.cssText = "width:100%;min-height:400px;margin:0;padding:0;";
+
   var iframe = document.createElement("iframe");
   iframe.src = url;
   iframe.style.cssText = "width:100%;height:900px;border:0;display:block;";
   iframe.title = "QR Code Generator";
-  (me && me.parentNode ? me.parentNode : document.body).appendChild(iframe);
+
+  wrapper.appendChild(iframe);
+
+  var appended = false;
+  if (me && me.parentNode && me.parentNode.appendChild) {
+    try {
+      me.parentNode.appendChild(wrapper);
+      appended = true;
+    } catch (e) {}
+  }
+  if (!appended && document.body) {
+    document.body.appendChild(wrapper);
+  }
 })();
