@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Tạo mã xác thực - </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!--
+    Neutraler Code für GitHub. Alle Werte kommen aus der URL (von Softr gesetzt).
+    Parameter: webhook=Name | branch=Branch-ID | base=Basis-URL (optional)
+    Ohne webhook & branch: Hinweis "Über Softr öffnen".
+    -->
+    <script>
+    (function() {
+        var p = new URLSearchParams(window.location.search);
+        var webhook = (p.get("webhook") || "").trim();
+        var branch = (p.get("branch") || "").trim();
+        var base = (p.get("base") && decodeURIComponent(p.get("base").trim())) || "https://n8nv2.flowrk.io/webhook/";
+        if (!webhook || !branch) {
+            window.CONFIG_MISSING = true;
+            return;
+        }
+        window.CONFIG = {
+            webhookName: webhook,
+            webhookBaseUrl: base,
+            branchId: branch
+        };
+    })();
+    </script>
+    <style>
+        /* Scope all styles to prevent leaking into host page when embedded */
+        .qr-scope {
+            /* shadcn-like light theme to match index.html */
+            --bg: #ffffff;
+            --fg: #0a0a0a;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --accent: #111111;
+            --accent-pressed: #000000;
+            --ok: #1d9a6c;
+            --err: #d70015;
+            --radius: 8px;
+            --ring: #111111;
+            --ring-offset: #ffffff;
+            color: var(--fg);
+            background: var(--bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            font-size: 14px;
+        }
+
+        .qr-scope .wrap {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 0 10px;
+        }
+
+        .qr-scope .card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 10px 20px 20px 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .qr-scope h1 {
+            margin: 0 0 6px;
+            font-size: 20px;
+            letter-spacing: -0.01em;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* NEU: Badge für den Filialnamen */
+        .qr-scope .branch-badge {
+            background-color: #f3f4f6;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+
+        /* Version Number - im Titel */
+        .qr-scope .version-title {
+            font-size: 11px;
+            color: #9ca3af;
+            opacity: 0.7;
+            font-weight: 400;
+            margin-left: 8px;
+        }
+
+        /* Version Number - unten rechts im Card */
+        .qr-scope .version-card {
+            font-size: 10px;
+            color: #9ca3af;
+            opacity: 0.7;
+            text-align: right;
+            margin-top: 8px;
+            margin-right: 8px;
+        }
+
+        .qr-scope p.desc {
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .qr-scope .grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px 16px;
+        }
+
+        .qr-scope label {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .qr-scope input,
+        .qr-scope select,
+        .qr-scope textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--fg);
+            outline: none;
+            font-size: 14px;
+            transition: box-shadow .15s ease, border-color .15s ease;
+        }
+
+        .qr-scope input:focus-visible,
+        .qr-scope select:focus-visible,
+        .qr-scope textarea:focus-visible {
+            border-color: var(--fg);
+            box-shadow: 0 0 0 2px var(--ring-offset), 0 0 0 4px var(--ring);
+        }
+
+        /* Note field: align base height with other inputs */
+        .qr-scope .note-input {
+            height: 44px;
+            min-height: 44px;
+            max-height: 160px;
+            resize: vertical;
+            line-height: 1.4;
+            background: #fffef9;
+            border-color: #f8f1d6;
+        }
+
+        .qr-scope .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: 8px;
+            margin-right: 8px;
+        }
+
+        .qr-scope button {
+            cursor: pointer;
+            background: var(--accent);
+            color: #fff;
+            border: 1px solid transparent;
+            border-radius: var(--radius);
+            padding: 12px 24px;
+            font-weight: 600;
+            height: 44px;
+            font-size: 14px;
+            transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .05s ease;
+        }
+
+        .qr-scope button:hover {
+            background: var(--accent-pressed);
+        }
+
+        .qr-scope button:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--ring-offset), 0 0 0 4px var(--ring);
+        }
+
+        .qr-scope button:active {
+            transform: translateY(1px);
+        }
+
+        .qr-scope button.secondary {
+            background: #fff;
+            color: var(--fg);
+            border-color: var(--border);
+        }
+
+        .qr-scope button.ok {
+            background: var(--ok);
+            color: #fff;
+        }
+
+        .qr-scope button.err {
+            background: var(--err);
+            color: #fff;
+        }
+
+        .qr-scope .spacer {
+            height: 18px;
+        }
+
+        .qr-scope .result {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 800px) {
+            .qr-scope .result {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .qr-scope .panel {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            transition: background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .qr-scope .info-panel.has-bonus {
+            background: #fff8e6;
+            border-color: #f7c948;
+        }
+
+        .qr-scope .field {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .qr-scope .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            word-break: break-all;
+            font-size: 13px;
+            background: #fafafa;
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 8px;
+        }
+
+        .qr-scope .qr {
+            display: grid;
+            place-items: center;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            min-height: 260px;
+        }
+
+        .qr-scope .qr img {
+            max-width: 100%;
+            height: auto;
+            image-rendering: pixelated;
+        }
+
+        .qr-scope .muted {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .qr-scope .hint {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+
+        .qr-scope .info-panel.hidden {
+            display: none;
+        }
+
+        .qr-scope .bonus-banner {
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: var(--radius);
+            color: #92400e;
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .qr-scope .bonus-banner.hidden {
+            display: none;
+        }
+
+        .qr-scope .visit-history {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 13px;
+        }
+
+        .qr-scope .visit-history li {
+            padding: 4px 0;
+            border-bottom: 1px dashed var(--border);
+            word-break: break-word;
+            white-space: normal;
+        }
+
+        .qr-scope .visit-history li:last-child {
+            border-bottom: none;
+        }
+
+        .qr-scope .visit-history .note {
+            display: block;
+            color: var(--muted);
+            font-size: 12px;
+            margin-top: 2px;
+        }
+
+        .qr-scope .errors {
+            color: #7f1d1d;
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            padding: 10px;
+            border-radius: var(--radius);
+            font-size: 13px;
+        }
+
+        .qr-scope .row .right {
+            margin-left: auto;
+        }
+
+        /* Kết quả panel: key-value grid for perfect alignment */
+        .qr-scope .kv {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            column-gap: 12px;
+            row-gap: 8px;
+            align-items: start;
+        }
+
+        .qr-scope .label {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .qr-scope .value {
+            font-size: 14px;
+        }
+
+        .qr-scope .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 600px) {
+            .qr-scope .kv {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .qr-scope .grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .qr-scope .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .custom-code1-452e14ea-15db-401b-bb02-da7686bb7a4b {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+
+        /* Advanced fields - hidden by default */
+        .qr-scope .advanced-fields {
+            display: none;
+        }
+
+        .qr-scope .advanced-fields.show {
+            display: block;
+        }
+
+        /* Minimal toggle button - more visible now */
+        .qr-scope .toggle-advanced {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 400;
+            color: #9ca3af;
+            transition: all .12s ease;
+            user-select: none;
+            opacity: 0.6;
+            padding: 0;
+        }
+
+        .qr-scope .toggle-advanced:hover {
+            opacity: 1;
+            color: #6b7280;
+        }
+
+        .qr-scope .toggle-advanced.active {
+            background: transparent;
+            color: var(--fg);
+            opacity: 1;
+        }
+
+        .qr-scope .advanced-label {
+            display: inline-block;
+            margin-right: 6px;
+            font-size: 11px;
+            color: #9ca3af;
+            font-weight: 400;
+        }
+
+        /* Hide empty image until QR code is loaded */
+        .qr-scope .qr img:not([src]),
+        .qr-scope .qr img[src=""] {
+            display: none;
+        }
+
+        /* Countdown Timer Styles - inline in header */
+        .qr-scope .panel h2 {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .qr-scope .countdown-time {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--fg);
+        }
+
+        .qr-scope .countdown-time.expired {
+            color: var(--err);
+        }
+
+        .qr-scope .qr.expired {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        /* Info box for opt-out message */
+        .qr-scope .info-box {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            margin-top: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .qr-scope .info-box .icon {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            color: #0284c7;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .qr-scope .info-box .text {
+            font-size: 13px;
+            color: #0c4a6e;
+            line-height: 1.5;
+        }
+
+        .qr-scope .info-box .text code {
+            background: #e0f2fe;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: #0369a1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="qr-scope">
+        <div class="wrap">
+            <div class="card">
+                <h1>
+                    Tạo mã xác thực
+                    <!-- Hier wird der Filialname angezeigt -->
+                    <span class="branch-badge" id="branchBadge">Loading...</span>
+                </h1>
+                <p class="desc">Tạo mã xác thực cho nhân viên, lấy liên kết sâu WhatsApp và hiển thị mã QR để khách
+                    quét.</p>
+
+                <form id="genForm">
+                    <div class="grid">
+                        <!-- Filialauswahl entfernt, da hardcoded -->
+                        <div>
+                            <label for="generated_by">👤 Nhân viên *</label>
+                            <input id="generated_by" name="generated_by" placeholder="Tên" required />
+                        </div>
+                        <div class="advanced-fields" id="validMinutesField">
+                            <label for="valid_minutes">Thời gian hiệu lực (phút)</label>
+                            <input id="valid_minutes" name="valid_minutes" type="number" min="1" step="1" value="1440" />
+                        </div>
+                        <div class="advanced-fields" id="maxUsesField">
+                            <label for="max_uses">Số lần dùng tối đa</label>
+                            <input id="max_uses" name="max_uses" type="number" min="1" step="1" value="1" />
+                        </div>
+                        <div>
+                            <label for="points_override">🎯 Điểm</label>
+                            <input id="points_override" name="points_override" type="number" step="1"
+                                placeholder="1" />
+                        </div>
+                        <div>
+                            <label for="note">📝 Ghi chú </label>
+                            <textarea id="note" name="note" class="note-input" placeholder="mầu/dịch vụ"></textarea>
+                        </div>
+                    </div>
+                    <div class="spacer"></div>
+                    <div style="display: flex; align-items: center; justify-content: flex-end; margin-right: 8px;">
+                        <span class="advanced-label">Tùy chọn nâng cao</span>
+                        <button type="button" class="toggle-advanced" id="toggleBtn"
+                            title="Tùy chọn nâng cao">+</button>
+                    </div>
+                    <div style="height: 12px;"></div>
+                    <div class="row">
+                        <button type="submit">Tạo</button>
+                        <button class="secondary" type="button" id="resetBtn">Đặt lại</button>
+                        <div class="right muted" id="statusText"></div>
+                    </div>
+                    <div class="version-card">v1.4</div>
+                </form>
+            </div>
+            <div class="spacer"></div>
+            <div class="result">
+                <div class="panel">
+                    <h2 style="margin:0 0 10px;font-size:16px;">
+                        <span id="pointsDisplay" style="display: none;"></span>
+                        <span class="countdown-time" id="countdownTime" style="display: none;"></span>
+                    </h2>
+                    <div class="qr" id="qrContainer">
+                        <img id="qr_img" src="" alt="" style="display: none;" />
+                        <div id="qr_placeholder" style="color: var(--muted); font-size: 13px;">Mã QR sẽ hiển thị ở đây
+                        </div>
+                    </div>
+                    <div class="hint" style="margin-top:10px;">Mã QR này chứa liên kết sâu WhatsApp. Khách có thể quét
+                        và gửi mã.
+                    </div>
+                </div>
+                <div class="panel info-panel hidden" id="customerInfoPanel">
+                    <h2 style="margin:0 0 10px;font-size:16px;">Thông tin khách</h2>
+                    <div class="bonus-banner hidden" id="bonusBanner">Khách đã đạt 10 điểm! 🎉</div>
+                    <div class="kv">
+                        <div class="label">Tên</div>
+                        <div class="value" id="customerName">—</div>
+                        <div class="label">SĐT</div>
+                        <div class="value" id="customerPhone">—</div>
+                        <div class="label">Điểm hiện có</div>
+                        <div class="value" id="customerPoints">—</div>
+                        <div class="label">Lượt ghé</div>
+                        <div class="value" id="customerVisits">—</div>
+                        <div class="label">Lần cuối</div>
+                        <div class="value" id="lastVisitSummary">—</div>
+                        <div class="label">5 lần gần nhất</div>
+                        <div class="value">
+                            <ul class="visit-history" id="visitHistoryList">
+                                <li class="muted">Không có dữ liệu</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="hint" id="customerInfoHint">Thông tin sẽ xuất hiện khi khách xác nhận mã.</div>
+                </div>
+            </div>
+
+            <!-- Info box for opt-out instructions -->
+            <div class="info-box">
+                <div class="icon">ℹ️</div>
+                <div class="text">
+                    Nếu khách hàng muốn rời khỏi chương trình, chỉ cần nhập: <code>/stop</code> trong cuộc trò chuyện
+                    WhatsApp.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="celebrationAudio" preload="auto"
+        src="https://raw.githubusercontent.com/t2thak/bilderspeicher/main/short-crowd-cheer-6713.mp3"></audio>
+    <audio id="notificationAudio" preload="auto"
+        src="https://raw.githubusercontent.com/t2thak/bilderspeicher/main/new-notification-028-383966.mp3"></audio>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.0/dist/confetti.browser.min.js"></script>
+    <script>
+        if (window.CONFIG_MISSING) {
+            document.body.innerHTML = '<div style="padding:40px;text-align:center;font-family:sans-serif;max-width:400px;margin:60px auto 0;"><p style="font-size:18px;margin:0 0 12px;">App bitte über Softr öffnen.</p><p style="color:#666;font-size:14px;margin:0;">Die Parameter <code>webhook</code> und <code>branch</code> müssen in der URL stehen (wird von Softr gesetzt).</p></div>';
+            throw new Error("CONFIG_MISSING");
+        }
+        const CURRENT_BRANCH = {
+            id: CONFIG.branchId,
+            code: "",
+            name: ""
+        };
+
+        const ENDPOINT = CONFIG.webhookBaseUrl + CONFIG.webhookName + "_qrcode";
+        const BRANCHES_ENDPOINT = CONFIG.webhookBaseUrl + CONFIG.webhookName + "_branches";
+        const STATUS_ENDPOINT = CONFIG.webhookBaseUrl + CONFIG.webhookName + "_qr_status";
+        const QR_API = "https://api.qrserver.com/v1/create-qr-code/?size=300x300&format=png&data=";
+        const DISPLAY_QR_MINUTES = 2;
+        let loyaltyThreshold = 10;
+        const celebrationAudio = document.getElementById("celebrationAudio");
+        celebrationAudio.crossOrigin = "anonymous";
+        celebrationAudio.setAttribute("playsinline", "");
+        celebrationAudio.volume = 1;
+        celebrationAudio.muted = true;
+
+        const notificationAudio = document.getElementById("notificationAudio");
+        notificationAudio.crossOrigin = "anonymous";
+        notificationAudio.setAttribute("playsinline", "");
+        notificationAudio.volume = 1;
+        notificationAudio.muted = true;
+
+        const form = document.getElementById("genForm");
+        const resetBtn = document.getElementById("resetBtn");
+        const statusText = document.getElementById("statusText");
+        const qr_img = document.getElementById("qr_img");
+        const qr_placeholder = document.getElementById("qr_placeholder");
+        const qrContainer = document.getElementById("qrContainer");
+        const toggleBtn = document.getElementById("toggleBtn");
+        const advancedFields = document.querySelectorAll(".advanced-fields");
+        const countdownTime = document.getElementById("countdownTime");
+        const pointsDisplay = document.getElementById("pointsDisplay");
+        const branchBadge = document.getElementById("branchBadge");
+        const customerInfoPanel = document.getElementById("customerInfoPanel");
+        const customerNameEl = document.getElementById("customerName");
+        const customerPhoneEl = document.getElementById("customerPhone");
+        const customerPointsEl = document.getElementById("customerPoints");
+        const customerVisitsEl = document.getElementById("customerVisits");
+        const lastVisitSummaryEl = document.getElementById("lastVisitSummary");
+        const customerInfoHint = document.getElementById("customerInfoHint");
+        const bonusBanner = document.getElementById("bonusBanner");
+        const visitHistoryList = document.getElementById("visitHistoryList");
+
+        // Load branch info from API
+        async function loadBranchInfo() {
+            try {
+                const res = await fetch(BRANCHES_ENDPOINT, {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Failed to load branches: ${res.status}`);
+                }
+
+                const json = await res.json();
+                
+                // Handle different response structures (robust like multibranch version)
+                let branches = [];
+                if (Array.isArray(json) && json.length > 0) {
+                    // Response is array: [{ "list_active_branches": { "branches": [...] } }]
+                    if (json[0].list_active_branches?.branches) {
+                        branches = json[0].list_active_branches.branches;
+                    } else if (json[0].branches) {
+                        branches = json[0].branches;
+                    }
+                } else if (json.list_active_branches?.branches) {
+                    // Response is object: { "list_active_branches": { "branches": [...] } }
+                    branches = json.list_active_branches.branches;
+                } else if (json.branches) {
+                    // Direct branches array
+                    branches = json.branches;
+                } else if (json.data?.branches) {
+                    // Nested data structure
+                    branches = json.data.branches;
+                }
+
+                // Find the branch with matching ID
+                const branch = branches.find(b => b.id === CURRENT_BRANCH.id);
+                
+                if (branch) {
+                    CURRENT_BRANCH.code = branch.branch_code || "";
+                    CURRENT_BRANCH.name = branch.branch_name || "";
+                    branchBadge.textContent = `${CURRENT_BRANCH.code} - ${CURRENT_BRANCH.name}`;
+                } else {
+                    branchBadge.textContent = "Branch nicht gefunden";
+                    console.error("Branch mit ID nicht gefunden:", CURRENT_BRANCH.id);
+                }
+            } catch (err) {
+                console.error("Error loading branch info:", err);
+                branchBadge.textContent = "Fehler beim Laden";
+            }
+        }
+
+        // Load branch info when page loads
+        loadBranchInfo();
+
+        let advancedVisible = false;
+        let countdownInterval = null;
+        let expiryTime = null;
+        let statusPollTimeout = null;
+        let statusPollPayload = null;
+        let lastCelebratedCodeId = null;
+        let cleanupTimeout = null;
+        let celebrationUnlocked = false;
+        const noteInput = document.getElementById("note");
+
+        hideCustomerInfo();
+        // Sound bei erster Nutzerinteraktion freischalten (pointerdown + click für maximale Kompatibilität)
+        document.addEventListener("pointerdown", unlockCelebrationAudio, { once: true });
+        document.addEventListener("click", unlockCelebrationAudio, { once: true });
+
+        // Auto-resize note textarea to fit content up to max-height
+        function autoResizeNote() {
+            if (!noteInput) return;
+            noteInput.style.height = "auto";
+            const maxPx = 160;
+            const basePx = 44;
+            noteInput.style.height = Math.min(Math.max(noteInput.scrollHeight, basePx), maxPx) + "px";
+        }
+        if (noteInput) {
+            noteInput.addEventListener("input", autoResizeNote);
+            autoResizeNote();
+        }
+
+        // Toggle advanced fields
+        toggleBtn.addEventListener("click", function () {
+            advancedVisible = !advancedVisible;
+
+            advancedFields.forEach(function (field) {
+                if (advancedVisible) {
+                    field.classList.add("show");
+                } else {
+                    field.classList.remove("show");
+                }
+            });
+
+            if (advancedVisible) {
+                toggleBtn.textContent = "−";
+                toggleBtn.classList.add("active");
+                toggleBtn.title = "Ẩn tùy chọn nâng cao";
+            } else {
+                toggleBtn.textContent = "+";
+                toggleBtn.classList.remove("active");
+                toggleBtn.title = "Hiển thị tùy chọn nâng cao";
+            }
+        });
+
+        function setStatus(msg, ok = true) {
+            statusText.textContent = msg || "";
+            statusText.style.color = ok ? "var(--ok)" : "var(--err)";
+        }
+
+        function showError(msg) { setStatus(msg, false); }
+        function hideError() { setStatus(""); }
+
+        /**
+         * Normalize deep link to ensure proper URL encoding
+         * Replaces spaces with %20 to ensure compatibility with older devices
+         */
+        function normalizeDeepLink(deeplink) {
+            if (!deeplink) return "";
+            // Replace any unencoded spaces with %20
+            // This handles cases where the server returns "CODE 4C4AEA" instead of "CODE%204C4AEA"
+            return deeplink.replace(/ /g, '%20');
+        }
+
+        function buildQrUrlFromDeepLink(deeplink) {
+            // First normalize the deep link to ensure proper encoding
+            const normalizedLink = normalizeDeepLink(deeplink);
+            // Then encode it again for the QR API URL parameter
+            return QR_API + encodeURIComponent(normalizedLink);
+        }
+
+        async function generateCode(payload) {
+            const res = await fetch(ENDPOINT, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const t = await res.text().catch(() => "");
+                throw new Error(`Máy chủ ${res.status}: ${t || res.statusText}`);
+            }
+
+            const json = await res.json();
+            
+            // Handle different response structures
+            if (Array.isArray(json) && json.length > 0) {
+                // Array response: [{ "generate_staff_code": {...} }]
+                if (json[0].generate_staff_code) {
+                    return json[0].generate_staff_code;
+                }
+                return json[0];
+            }
+            
+            // Object response
+            if (json && json.data) return json.data;
+            if (json && json.generate_staff_code) return json.generate_staff_code;
+            return json;
+        }
+
+        function extractQrUrl(result) {
+            // IMPORTANT: We need to rebuild the QR URL even if server provides qr_url
+            // because api.qrserver.com decodes %20 back to space in the QR code.
+            // We need to double-encode: %20 -> %2520 so that:
+            // 1. QR API decodes %2520 -> %20
+            // 2. QR code contains %20 (not space)
+            // 3. Old Samsung devices can read it correctly
+
+            if (result && result.deep_link) {
+                // The deep_link from server is already encoded: "...?text=CODE%20D8E732"
+                // We need to encode it AGAIN so %20 becomes %2520
+                const doubleEncodedLink = encodeURIComponent(result.deep_link);
+                return QR_API + doubleEncodedLink;
+            }
+
+            // Fallback to server's qr_url if no deep_link
+            if (result && result.qr_url) {
+                return result.qr_url;
+            }
+
+            return "";
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function startCountdown(validMinutes) {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            const now = Date.now();
+            expiryTime = now + (validMinutes * 60 * 1000);
+
+            countdownTime.style.display = "inline";
+            countdownTime.classList.remove("expired");
+            qrContainer.classList.remove("expired");
+
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
+            scheduleAutoCleanup(validMinutes);
+        }
+
+        function updateCountdown() {
+            if (!expiryTime) return;
+
+            const now = Date.now();
+            const remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
+
+            if (remaining === 0) {
+                countdownTime.textContent = "00:00";
+                countdownTime.classList.add("expired");
+                qrContainer.classList.add("expired");
+                if (countdownInterval) {
+                    clearInterval(countdownInterval);
+                    countdownInterval = null;
+                }
+                cancelAutoCleanup();
+                expireSession(true);
+            } else {
+                countdownTime.textContent = formatTime(remaining);
+            }
+        }
+
+        function stopCountdown() {
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            stopPollingRedemption();
+            countdownTime.style.display = "none";
+            countdownTime.textContent = "";
+            expiryTime = null;
+            countdownTime.classList.remove("expired");
+            qrContainer.classList.remove("expired");
+        }
+
+        function resetFormFields() {
+            // Setze nur die relevanten Felder zurück, behalte "generated_by"
+            document.getElementById("points_override").value = "";
+            document.getElementById("valid_minutes").value = "1440";
+            document.getElementById("max_uses").value = "1";
+        }
+
+        function showPoints(points) {
+            if (points !== null && points !== undefined) {
+                pointsDisplay.textContent = `Điểm được cấp: ${points}`;
+                pointsDisplay.style.display = "inline";
+            } else {
+                pointsDisplay.style.display = "none";
+            }
+        }
+
+        function maskPhone(phone = "") {
+            const sanitized = String(phone).replace(/[^\d+]/g, "");
+            const tail = sanitized.slice(-4);
+            return tail ? `***${tail}` : "ẩn";
+        }
+
+        function hideCustomerInfo() {
+            customerInfoPanel.classList.add("hidden");
+            customerNameEl.textContent = "—";
+            customerPhoneEl.textContent = "—";
+            customerPointsEl.textContent = "—";
+            customerVisitsEl.textContent = "—";
+            lastVisitSummaryEl.textContent = "—";
+            customerInfoHint.textContent = "Thông tin sẽ xuất hiện khi khách xác nhận mã.";
+            bonusBanner.classList.add("hidden");
+            customerInfoPanel.classList.remove("has-bonus");
+            visitHistoryList.innerHTML = '<li class="muted">Không có dữ liệu</li>';
+        }
+
+        function showCustomerInfo(customer = {}, totalPoints = null, codeId = null, bonusInfo = null, recentVisits = [], note = null) {
+            const name = (customer?.name || "Khách").trim();
+            const visits = Number.isFinite(customer?.total_visits) ? customer.total_visits : 0;
+            const points = Number.isFinite(totalPoints)
+                ? totalPoints
+                : Number.isFinite(customer?.total_points)
+                    ? customer.total_points
+                    : null;
+
+            customerNameEl.textContent = name || "Khách";
+            customerPhoneEl.textContent = maskPhone(customer?.phone_number);
+            customerPointsEl.textContent = points !== null ? points : "—";
+            customerVisitsEl.textContent = visits;
+            customerInfoHint.textContent = points !== null
+                ? "Khách đã xác nhận mã trong phiên này."
+                : "Điểm hiện tại chưa rõ – vui lòng kiểm tra lại.";
+            customerInfoPanel.classList.remove("hidden");
+            if (bonusInfo?.triggered) {
+                bonusBanner.textContent = `Khách đã đạt ${loyaltyThreshold} điểm! 🎉`;
+                bonusBanner.classList.remove("hidden");
+                customerInfoPanel.classList.add("has-bonus");
+            } else {
+                bonusBanner.classList.add("hidden");
+                customerInfoPanel.classList.remove("has-bonus");
+            }
+            renderVisitHistory(recentVisits);
+            handleMilestoneCelebration(codeId, bonusInfo);
+            // Notification-Ton bei jedem Anzeigen der Kundendaten nach dem Scan
+            playNotificationSound();
+        }
+
+        function renderVisitHistory(visits = []) {
+            if (!Array.isArray(visits) || visits.length === 0) {
+                visitHistoryList.innerHTML = '<li class="muted">Không có dữ liệu</li>';
+                lastVisitSummaryEl.textContent = "—";
+                return;
+            }
+
+            const parsed = visits
+                .map((entry) => {
+                    const dateValue = entry?.date || entry;
+                    const note = entry?.note;
+                    const dateObj = dateValue ? new Date(dateValue) : null;
+                    if (!dateObj || Number.isNaN(dateObj.getTime())) return null;
+                    return { date: dateObj, key: dateObj.toISOString().slice(0, 10), note };
+                })
+                .filter(Boolean)
+                .sort((a, b) => b.date.getTime() - a.date.getTime());
+
+            if (!parsed.length) {
+                visitHistoryList.innerHTML = '<li class="muted">Không có dữ liệu</li>';
+                lastVisitSummaryEl.textContent = "—";
+                return;
+            }
+
+            const todayKey = new Date().toISOString().slice(0, 10);
+            const filtered = parsed.filter((item) => item.key !== todayKey);
+            const history = (filtered.length ? filtered : parsed).slice(0, 5);
+
+            const formatter = new Intl.DateTimeFormat("vi-VN", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+            });
+            visitHistoryList.innerHTML = history
+                .map((item) => {
+                    const dateStr = formatter.format(item.date);
+                    const noteStr = item.note && String(item.note).trim() !== "" ? `<span class="note">${item.note}</span>` : "";
+                    return `<li>${dateStr}${noteStr}</li>`;
+                })
+                .join("");
+
+            const referenceDate = history[0]?.date;
+            if (referenceDate) {
+                const diffMillis = Date.now() - referenceDate.getTime();
+                const diffDays = Math.max(0, Math.floor(diffMillis / (1000 * 60 * 60 * 24)));
+                lastVisitSummaryEl.textContent = diffDays === 0 ? "Hôm nay" : `${diffDays} ngày trước`;
+            } else {
+                lastVisitSummaryEl.textContent = "—";
+            }
+        }
+
+        function scheduleAutoCleanup(validMinutes) {
+            cancelAutoCleanup();
+            cleanupTimeout = setTimeout(() => {
+                cleanupTimeout = null;
+                expireSession(false);
+            }, Math.max(1, validMinutes) * 60 * 1000);
+        }
+
+        function cancelAutoCleanup() {
+            if (cleanupTimeout) {
+                clearTimeout(cleanupTimeout);
+                cleanupTimeout = null;
+            }
+        }
+
+        function expireSession(reloadPage = false) {
+            stopPollingRedemption();
+            hideCustomerInfo();
+            resetFormFields();
+            pointsDisplay.style.display = "none";
+            qr_img.src = "";
+            qr_img.style.display = "none";
+            qr_placeholder.style.display = "block";
+            qr_placeholder.textContent = "Mã QR đã hết hạn";
+            qr_placeholder.style.color = "var(--err)";
+            setStatus("Phiên đã hết hạn", false);
+            advancedVisible = false;
+            advancedFields.forEach((field) => field.classList.remove("show"));
+            toggleBtn.textContent = "+";
+            toggleBtn.classList.remove("active");
+            toggleBtn.title = "Hiển thị tùy chọn nâng cao";
+            if (reloadPage) {
+                window.location.reload();
+            }
+        }
+
+        function triggerConfettiBurst() {
+            if (typeof confetti !== "function") return;
+            const bursts = [
+                { particleCount: 120, spread: 75, origin: { y: 0.7 } },
+                { particleCount: 90, spread: 60, origin: { x: 0.2, y: 0.8 } },
+                { particleCount: 90, spread: 60, origin: { x: 0.8, y: 0.8 } },
+                { particleCount: 160, spread: 100, origin: { y: 0.5 } },
+                { particleCount: 100, spread: 80, origin: { x: 0.1, y: 0.6 } },
+                { particleCount: 100, spread: 80, origin: { x: 0.9, y: 0.6 } }
+            ];
+            bursts.forEach((config, index) => {
+                setTimeout(() => confetti(config), index * 250);
+            });
+        }
+
+        function playFallbackChime() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = "triangle";
+                osc.frequency.setValueAtTime(660, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(990, ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.4, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.6);
+            } catch (err) {
+                console.warn("Fallback sound failed:", err);
+            }
+        }
+
+        async function playCelebrationSound() {
+            await unlockCelebrationAudio();
+            try {
+                celebrationAudio.muted = false;
+                celebrationAudio.currentTime = 0;
+                await celebrationAudio.play();
+            } catch (err) {
+                console.warn("Celebration sound failed:", err);
+                playFallbackChime();
+            }
+        }
+
+        async function playNotificationSound() {
+            await unlockCelebrationAudio();
+            try {
+                notificationAudio.muted = false;
+                notificationAudio.currentTime = 0;
+                await notificationAudio.play();
+            } catch (err) {
+                console.warn("Notification sound failed:", err);
+                playFallbackChime();
+            }
+        }
+
+        async function unlockCelebrationAudio() {
+            if (celebrationUnlocked) return;
+            try {
+                celebrationAudio.muted = true;
+                await celebrationAudio.play();
+                celebrationAudio.pause();
+                celebrationAudio.currentTime = 0;
+                celebrationAudio.muted = false;
+                notificationAudio.muted = true;
+                await notificationAudio.play();
+                notificationAudio.pause();
+                notificationAudio.currentTime = 0;
+                notificationAudio.muted = false;
+                celebrationUnlocked = true;
+            } catch (err) {
+                console.warn("Audio unlock blocked:", err);
+            }
+        }
+
+        function handleMilestoneCelebration(codeId, bonusInfo) {
+            if (!codeId || !bonusInfo) return;
+            if (!bonusInfo.triggered) return;
+            if (lastCelebratedCodeId === codeId) return;
+            lastCelebratedCodeId = codeId;
+            triggerConfettiBurst();
+            playCelebrationSound();
+        }
+
+        function setRedemptionStatus(totalPoints, bonusInfo) {
+            if (bonusInfo?.triggered) {
+                setStatus(`Khách đã đạt ${loyaltyThreshold} điểm! 🎉`, true);
+            } else if (totalPoints !== null) {
+                setStatus("Điểm khách đã được cập nhật", true);
+            } else {
+                setStatus("Khách đã xác nhận mã", true);
+            }
+        }
+
+        function stopPollingRedemption() {
+            if (statusPollTimeout) {
+                clearTimeout(statusPollTimeout);
+                statusPollTimeout = null;
+            }
+            statusPollPayload = null;
+        }
+
+        function startPollingRedemption(codeId, codeValue) {
+            if (!codeId && !codeValue) return;
+            stopPollingRedemption();
+            statusPollPayload = {
+                code_id: codeId || null,
+                code: codeValue || null
+            };
+
+            const poll = async () => {
+                if (!statusPollPayload) return;
+                try {
+                    const res = await fetch(STATUS_ENDPOINT, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(statusPollPayload)
+                    });
+
+                    if (!res.ok) {
+                        throw new Error(`Status ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    if (data?.redeemed) {
+                        if (Number.isFinite(data.loyalty_bonus_threshold)) {
+                            loyaltyThreshold = data.loyalty_bonus_threshold;
+                        }
+                        const total = typeof data.points_after === "number" ? data.points_after : null;
+                        const bonusInfo = {
+                            triggered: Boolean(data.bonus_triggered),
+                            points_before: data.bonus_points_before ?? null,
+                            points_after: data.bonus_points_after ?? null,
+                            bonus_count: data.bonus_count ?? null
+                        };
+                        const visits = Array.isArray(data.recent_visits) ? data.recent_visits : [];
+                        showCustomerInfo(
+                            data.customer || null,
+                            total,
+                            data.code_id || statusPollPayload?.code_id || null,
+                            bonusInfo,
+                            visits,
+                            data.note || null
+                        );
+                        setRedemptionStatus(total, bonusInfo);
+                        stopCountdown();
+                        stopPollingRedemption();
+                        return;
+                    }
+                } catch (err) {
+                    console.warn("Status polling failed:", err);
+                }
+
+                statusPollTimeout = setTimeout(poll, 4000);
+            };
+
+            poll();
+        }
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            hideError();
+            setStatus("Đang tạo…", true);
+            hideCustomerInfo();
+            stopPollingRedemption();
+            unlockCelebrationAudio();
+
+            const generated_by = document.getElementById("generated_by").value || "staff:unknown";
+            const valid_minutes = Number(document.getElementById("valid_minutes").value || 1440);
+            const max_uses = Number(document.getElementById("max_uses").value || 1);
+            const points_override_raw = document.getElementById("points_override").value;
+            const points_override = points_override_raw === "" ? null : Number(points_override_raw);
+            const note = document.getElementById("note").value || null;
+
+            // Debug: Zeige was gesendet wird
+            const payload = {
+                // HIER WIRD DIE FESTE ID ÜBERGEBEN
+                branch_id: CURRENT_BRANCH.id,
+                generated_by,
+                valid_minutes,
+                max_uses,
+                points_override,
+                    note,
+            };
+            console.log("📤 Gesendet an Server:", payload);
+            console.log("📊 points_override Typ:", typeof points_override, "Wert:", points_override);
+
+            try {
+                const result = await generateCode(payload);
+
+                const qrUrl = extractQrUrl(result);
+                qr_img.src = qrUrl || "";
+                qr_img.alt = qrUrl ? "Mã QR" : "";
+
+                // Debug: Zeige was zurückkommt
+                console.log("📥 Antwort vom Server:", result);
+                console.log("📊 result.points:", result.points, "result.points_override:", result.points_override);
+
+                // Priorität: Eingabe > Server-Antwort > Default
+                const points = points_override !== null ? points_override : (result.points || result.points_override || 1);
+                console.log("✅ Finale Punkte (Anzeige):", points);
+                showPoints(points);
+                const codeId = result.code_id || result.codeId || result.validation_id || null;
+                const codeValue = result.code || result.generated_code || null;
+
+                if (qrUrl) {
+                    qr_img.style.display = "block";
+                    qr_placeholder.style.display = "none";
+                    qr_placeholder.textContent = "Mã QR sẽ hiển thị ở đây";
+                    qr_placeholder.style.color = "var(--muted)";
+                    startCountdown(DISPLAY_QR_MINUTES);
+                } else {
+                    qr_img.style.display = "none";
+                    qr_placeholder.style.display = "block";
+                    stopCountdown();
+                }
+
+                document.querySelector('.qr-scope .result').scrollIntoView({ behavior: 'smooth' });
+                if (codeId || codeValue) {
+                    setStatus("Đang chờ khách xác nhận điểm...", true);
+                    startPollingRedemption(codeId, codeValue);
+                } else {
+                    setStatus("Hoàn tất", true);
+                }
+            } catch (err) {
+                console.error(err);
+                showError(err.message || "Tạo mã không thành công");
+                setStatus("Thất bại", false);
+                hideCustomerInfo();
+                stopCountdown();
+                cancelAutoCleanup();
+            }
+        });
+
+        resetBtn.addEventListener("click", () => {
+            hideError();
+            qr_img.src = "";
+            qr_img.style.display = "none";
+            qr_placeholder.style.display = "block";
+            qr_placeholder.textContent = "Mã QR sẽ hiển thị ở đây";
+            qr_placeholder.style.color = "var(--muted)";
+            setStatus("");
+
+            stopCountdown();
+            pointsDisplay.style.display = "none";
+            hideCustomerInfo();
+            cancelAutoCleanup();
+
+            advancedVisible = false;
+            advancedFields.forEach(function (field) {
+                field.classList.remove("show");
+            });
+            toggleBtn.textContent = "+";
+            toggleBtn.classList.remove("active");
+            toggleBtn.title = "Hiển thị tùy chọn nâng cao";
+        });
+    </script>
+</body>
+
+</html>
