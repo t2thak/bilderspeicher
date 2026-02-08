@@ -12,6 +12,12 @@
   'use strict';
 
   var CONFIG = window.QR_CONFIG || {};
+  if (window.QR_EMBED && (window.QR_EMBED.webhook || window.QR_EMBED.branch)) {
+    CONFIG.webhook = CONFIG.webhook || window.QR_EMBED.webhook;
+    CONFIG.branch_id = CONFIG.branch_id || window.QR_EMBED.branch || window.QR_EMBED.branch_id;
+    CONFIG.webhook_base = CONFIG.webhook_base || window.QR_EMBED.base;
+    CONFIG.language = CONFIG.language || window.QR_EMBED.language;
+  }
   var scriptEl = document.currentScript || (function() {
     var scripts = document.getElementsByTagName("script");
     for (var i = scripts.length - 1; i >= 0; i--) {
