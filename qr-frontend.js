@@ -55,6 +55,21 @@
       console.error('[QR-Frontend] Container #' + CONTAINER_ID + ' nicht gefunden');
       return;
     }
+    var containerLang = (container.getAttribute('data-language') || container.getAttribute('data-lang') || '').trim().toLowerCase();
+    if (containerLang) {
+      language = containerLang;
+    } else {
+      var scripts = document.getElementsByTagName('script');
+      for (var i = 0; i < scripts.length; i++) {
+        var src = scripts[i].src || '';
+        if (src.indexOf('qr-frontend') !== -1) {
+          var lang = (scripts[i].getAttribute('data-language') || '').trim().toLowerCase();
+          if (lang) { language = lang; break; }
+        }
+      }
+    }
+    T = TRANSLATIONS[language] || TRANSLATIONS.vi;
+
     if (!webhook || !branch) {
       var msg = { de: 'App bitte über Softr öffnen oder Parameter setzen. URL: ?webhook=justai&branch=DEINE-BRANCH-ID oder data-webhook / data-branch am Script-Tag.', en: 'Open app via Softr or set parameters. URL: ?webhook=justai&branch=YOUR-BRANCH-ID or data-webhook / data-branch on script tag.', vi: 'Mở app qua Softr hoặc đặt tham số. URL: ?webhook=justai&branch=BRANCH-ID hoặc data-webhook / data-branch trên thẻ script.' };
       var t = msg[language] || msg.vi;
