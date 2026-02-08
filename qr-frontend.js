@@ -31,7 +31,8 @@
     if (!webhook) webhook = g('webhook');
     if (!branch) branch = g('branch') || g('branch-id') || g('branch_id');
     if (!base) base = g('base') || g('webhook-base') || g('webhook_base') || base;
-    if (g('language')) language = g('language').toLowerCase();
+    var scriptLang = (g('language') || '').toLowerCase();
+    if (scriptLang && scriptLang !== 'vi') language = scriptLang;
   }
   var cfg = window.QR_CONFIG || window.QR_EMBED || {};
   if (cfg.webhook) webhook = (cfg.webhook || '').trim();
@@ -67,8 +68,8 @@
     var langFromCur = '';
     if (cur && (cur.src || '').indexOf('qr-frontend') !== -1)
       langFromCur = parseLangFromSrc(cur.src) || (cur.getAttribute('data-language') || '').trim().toLowerCase();
-    if (containerLang) language = containerLang;
-    else if (langFromCur) language = langFromCur;
+    if (containerLang && containerLang !== 'vi') language = containerLang;
+    else if (langFromCur && langFromCur !== 'vi') language = langFromCur;
     else {
       var scripts = document.getElementsByTagName('script');
       for (var i = scripts.length - 1; i >= 0; i--) {
@@ -76,7 +77,7 @@
         var src = s.src || '';
         if (src.indexOf('qr-frontend') === -1) continue;
         var lang = parseLangFromSrc(src) || (s.getAttribute('data-language') || '').trim().toLowerCase();
-        if (lang) { language = lang; break; }
+        if (lang && lang !== 'vi') { language = lang; break; }
       }
       if (language === 'de') {
         try {
@@ -91,6 +92,7 @@
       }
     }
     T = TRANSLATIONS[language] || TRANSLATIONS.de;
+    try { window.QR_FRONTEND_LANG = language; } catch (e) {}
 
     if (!webhook || !branch) {
       var msg = { de: 'App bitte über Softr öffnen oder Parameter setzen. URL: ?webhook=justai&branch=DEINE-BRANCH-ID oder data-webhook / data-branch am Script-Tag.', en: 'Open app via Softr or set parameters. URL: ?webhook=justai&branch=YOUR-BRANCH-ID or data-webhook / data-branch on script tag.', vi: 'Mở app qua Softr hoặc đặt tham số. URL: ?webhook=justai&branch=BRANCH-ID hoặc data-webhook / data-branch trên thẻ script.' };
