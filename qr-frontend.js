@@ -55,17 +55,39 @@
       console.error('[QR-Frontend] Container #' + CONTAINER_ID + ' nicht gefunden');
       return;
     }
+    function parseLangFromSrc(src) {
+      try {
+        var u = new URL(src, window.location.href);
+        var lang = (u.searchParams.get('language') || u.searchParams.get('lang') || '').trim().toLowerCase();
+        return lang || '';
+      } catch (e) { return ''; }
+    }
     var containerLang = (container.getAttribute('data-language') || container.getAttribute('data-lang') || '').trim().toLowerCase();
-    if (containerLang) {
-      language = containerLang;
-    } else {
+    var cur = document.currentScript;
+    var langFromCur = '';
+    if (cur && (cur.src || '').indexOf('qr-frontend') !== -1)
+      langFromCur = parseLangFromSrc(cur.src) || (cur.getAttribute('data-language') || '').trim().toLowerCase();
+    if (containerLang) language = containerLang;
+    else if (langFromCur) language = langFromCur;
+    else {
       var scripts = document.getElementsByTagName('script');
-      for (var i = 0; i < scripts.length; i++) {
-        var src = scripts[i].src || '';
-        if (src.indexOf('qr-frontend') !== -1) {
-          var lang = (scripts[i].getAttribute('data-language') || '').trim().toLowerCase();
-          if (lang) { language = lang; break; }
-        }
+      for (var i = scripts.length - 1; i >= 0; i--) {
+        var s = scripts[i];
+        var src = s.src || '';
+        if (src.indexOf('qr-frontend') === -1) continue;
+        var lang = parseLangFromSrc(src) || (s.getAttribute('data-language') || '').trim().toLowerCase();
+        if (lang) { language = lang; break; }
+      }
+      if (language === 'vi') {
+        try {
+          var pageParams = new URLSearchParams(window.location.search);
+          var pageLang = (pageParams.get('language') || pageParams.get('lang') || '').trim().toLowerCase();
+          if (pageLang) language = pageLang;
+        } catch (e) {}
+      }
+      if (language === 'vi' && window.QR_FRONTEND_LANGUAGE) {
+        var gl = String(window.QR_FRONTEND_LANGUAGE).trim().toLowerCase();
+        if (gl) language = gl;
       }
     }
     T = TRANSLATIONS[language] || TRANSLATIONS.vi;
